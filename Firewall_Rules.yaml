@@ -1,0 +1,63 @@
+heat_template_version: 2015-04-30
+description: Firewall Rules
+parameters:
+  fw_source_cidrs:
+    label: Firewall Rule Source CIDR/IP
+    type: string
+    description: Firewall Rules Source CIDR/IP
+    default: 0.0.0.0/0
+  fw_dest_cidrs:
+    label: Firewall Rule Destination CIDR/IP
+    type: string
+    description: Firewall Rules Destination CIDR/IP
+    default: 0.0.0.0/0
+  fw_source_port:
+    label: Firewall Rule Source Port
+    type: string
+    description: Firewall Rules Source Port
+    default: 1:65535
+  fw_dest_port:
+    label: Firewall Rule Destination Port
+    type: string
+    description: Firewall Rules Destination Port
+    default: 1:65535
+
+resources:
+  fw_tcp_allowall:
+    type: OS::Neutron::FirewallRule
+    properties:
+      action: allow
+      source_ip_address: {get_param: fw_source_cidrs}
+      source_port: {get_param: fw_source_port}
+      destination_ip_address: {get_param: fw_dest_cidrs}
+      destination_port: {get_param: fw_dest_port}
+      enabled: True
+      name: TCP Allow All
+      protocol: tcp
+
+  fw_udp_allowall:
+    type: OS::Neutron::FirewallRule
+    properties:
+      action: allow
+      source_ip_address: {get_param: fw_source_cidrs}
+      source_port: {get_param: fw_source_port}
+      destination_ip_address: {get_param: fw_dest_cidrs}
+      destination_port: {get_param: fw_dest_port}
+      enabled: True
+      name: UDP Allow All
+      protocol: udp
+
+  fw_icmp_allow:
+    type: OS::Neutron::FirewallRule
+    properties:
+      action: allow
+      source_ip_address: {get_param: fw_source_cidrs}
+      destination_ip_address: {get_param: fw_dest_cidrs}
+      enabled: True
+      name: ICMP Allow
+      protocol: icmp
+
+#outputs:
+#  this_rule:
+#    description: "Id of this rule"
+#    value: { get_attr: [ fw_tcp_allowall, Id ] }

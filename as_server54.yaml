@@ -1,0 +1,42 @@
+heat_template_version: 2015-04-30
+description: LAMP server
+parameters:
+  image:
+    type: string
+    description: Image used for servers
+    default: LAMP5.4
+  key_name:
+    type: string
+    description: SSH key to connect to the servers
+    default: key1
+  flavor:
+    type: string
+    description: flavor used by the servers
+    default: af7c9a19-9636-44f9-af05-e0479d6a15b0
+  pool_id:
+    type: string
+    description: Pool to contact
+  metadata:
+    type: json
+  network:
+    type: string
+    description: Network used by the server
+    default: a81ed667-4078-4095-a34c-65777ecbc68e
+
+resources:
+  lamp:
+    type: OS::Nova::Server
+    properties:
+      name: LAMP Server
+      flavor: {get_param: flavor}
+      image: {get_param: image}
+      key_name: {get_param: key_name}
+      metadata: {get_param: metadata}
+      networks: [{network: {get_param: network} }]
+
+  member:
+    type: OS::Neutron::PoolMember
+    properties:
+      pool_id: {get_param: pool_id}
+      address: {get_attr: [lamp, first_address]}
+      protocol_port: 80

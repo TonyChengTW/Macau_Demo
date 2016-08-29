@@ -1,0 +1,52 @@
+heat_template_version: 2015-04-30
+
+description: Simple template to deploy a single compute instance
+
+parameters:
+  instance_name:
+    type: string
+    label: instance name
+    description: a name for instance
+  image:
+    type: string
+    label: Image name or ID
+    description: Image to be used for compute instance
+    default: de55d41e-d321-4190-a6be-3c30fcdf005e
+  flavor:
+    type: string
+    label: Flavor
+    description: Type of instance (flavor) to be used
+    default: af7c9a19-9636-44f9-af05-e0479d6a15b0
+  key:
+    type: string
+    label: Key name
+    description: Name of key-pair to be used for compute instance
+    default: key1
+  private_network:
+    type: string
+    label: Private network name or ID
+    description: Network to attach instance to.
+    default: a81ed667-4078-4095-a34c-65777ecbc68e
+
+resources:
+  my_instance:
+    type: OS::Nova::Server
+    properties:
+      name: { get_param: instance_name }
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key }
+      networks:
+        - network: { get_param: private_network }
+      user_data: |
+        #!/bin/sh
+        echo "Hello, World!"
+      user_data_format: RAW
+
+outputs:
+  instance_name:
+    description: Name of the instance
+    value: { get_attr: [my_instance, instance_name] }
+  instance_ip:
+    description: IP address of the instance
+    value: { get_attr: [my_instance, first_address] }
