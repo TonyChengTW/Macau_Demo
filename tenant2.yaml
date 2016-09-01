@@ -1,0 +1,344 @@
+heat_template_version: 2015-04-30
+description: AutoScaling in LoadBalancer
+parameters:
+  web_image:
+    type: string
+    description: Image used for servers
+    #default: d36f2c18-1fcd-4a65-a973-b465897e6b57 # lamp5
+    default: t2-web-v2
+    label: "Web Server Image"
+
+  db_image:
+    type: string
+    description: Image used for servers
+    #default: d36f2c18-1fcd-4a65-a973-b465897e6b57 # lamp5
+    default: t2-db-v2
+    label: "DB Server Image"
+
+  app_image:
+    type: string
+    description: Image used for servers
+    #default: d36f2c18-1fcd-4a65-a973-b465897e6b57 # lamp5
+    default: t2-app-v2
+    label: "APP Server Image"
+
+  web_flavor:
+    type: string
+    description: flavor used by the web servers
+    default: 2u4r5g
+    label: "Web Server Flavor"
+
+  db_flavor:
+    type: string
+    description: flavor used by the DB servers
+    default: 2u2r5g
+    label: "DB Server Flavor"
+
+  app_flavor:
+    type: string
+    description: flavor used by the DB servers
+    default: 2u2r5g
+    label: "APP Server Flavor"
+
+  key:
+    type: string
+    description: SSH key to connect to the servers
+    default: key1
+
+#  network:
+#    type: string
+#    description: Network used by the server
+#    default: a81ed667-4078-4095-a34c-65777ecbc68e
+
+#  subnet_id:
+#    type: string
+#    description: subnet on which the load balancer will be located
+#    default: f0ba0e25-c482-4e15-98f2-dc181dee2d79
+
+  internal_netA_subnet_cidr:
+    type: string
+    description: subnet IP/CIDR
+    default: 10.0.0.0/24
+
+  internal_netB_subnet_cidr:
+    type: string
+    description: subnet IP/CIDR
+    default: 20.0.0.0/24
+
+  internal_netC_subnet_cidr:
+    type: string
+    description: subnet IP/CIDR
+    default: 30.0.0.0/24
+
+  web_ip:
+    label: "Web Server IP"
+    type: string
+    description: Web Server IP
+    default: 10.0.0.101
+
+  app_ip:
+    label: "APP Server IP"
+    type: string
+    description: APP Server IP
+    default: 20.0.0.101
+
+  db_ip:
+    label: "DB Server IP"
+    type: string
+    description: DB Server IP
+    default: 30.0.0.101
+
+  external_network_id:
+    type: string
+    description: UUID of a Neutron external network
+    default: 73a32a5d-8a0b-4ffc-9c32-a288224917ac
+
+  fw_source_cidrs:
+   label: Firewall Rule Source CIDR/IP
+   type: string
+   description: Firewall Rules Source CIDR/IP
+   default: 0.0.0.0/0
+
+  fw_dest_cidrs:
+   label: Firewall Rule Destination CIDR/IP
+   type: string
+   description: Firewall Rules Destination CIDR/IP
+   default: 0.0.0.0/0
+
+  fw_source_port:
+   label: Firewall Rule Source Port
+   type: string
+   description: Firewall Rules Source Port
+   default: 1:65535
+
+  fw_dest_port:
+   label: Firewall Rule Destination Port
+   type: string
+   description: Firewall Rules Destination Port
+   default: 1:65535
+
+resources:
+  internal_netA:
+    type: 'OS::Neutron::Net'
+    properties:
+      name: "netA"
+
+  internal_netA_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      name: "internal-netA-subnet"
+      cidr: {get_param: internal_netA_subnet_cidr}
+      dns_nameservers: [8.8.8.8, 8.8.4.4]
+      ip_version: 4
+      network_id: {get_resource: internal_netA}
+
+  internal_netA_port:
+    type: OS::Neutron::Port
+    properties:
+      name: "netA-fixed-port"
+      fixed_ips:
+      - ip_address: {get_param: web_ip}
+      network_id: {get_resource: internal_netA}
+
+  internal_netB:
+    type: 'OS::Neutron::Net'
+    properties:
+      name: "netB"
+
+  internal_netB_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      name: "internal-netB-subnet"
+      cidr: {get_param: internal_netB_subnet_cidr}
+      dns_nameservers: [8.8.8.8, 8.8.4.4]
+      ip_version: 4
+      network_id: {get_resource: internal_netB}
+
+  internal_netB_port:
+    type: OS::Neutron::Port
+    properties:
+      name: "netB-fixed-port"
+      fixed_ips:
+      - ip_address: {get_param: app_ip}
+        subnet_id: {get_resource: internal_netB_subnet}
+      network_id: {get_resource: internal_netB}
+
+  internal_netC:
+    type: 'OS::Neutron::Net'
+    properties:
+      name: "netC"
+
+  internal_netC_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      name: "internal-netC-subnet"
+      cidr: {get_param: internal_netC_subnet_cidr}
+      dns_nameservers: [8.8.8.8, 8.8.4.4]
+      ip_version: 4
+      network_id: {get_resource: internal_netC}
+
+  internal_netC_port:
+    type: OS::Neutron::Port
+    properties:
+      name: "netC-fixed-port"
+      fixed_ips:
+      - ip_address: {get_param: db_ip}
+        subnet_id: {get_resource: internal_netC_subnet}
+      network_id: {get_resource: internal_netC}
+
+  router1:
+    type: OS::Neutron::Router
+    properties:
+      external_gateway_info: {network: external-network}
+      name: "t2-Router"
+
+  bind_interface_NetA:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router_id: {get_resource: router1}
+      subnet_id: {get_resource: internal_netA_subnet}
+
+  bind_interface_NetB:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router_id: {get_resource: router1}
+      subnet_id: {get_resource: internal_netB_subnet}
+
+  bind_interface_NetC:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router_id: {get_resource: router1}
+      subnet_id: {get_resource: internal_netC_subnet}
+#------  Web Server Provisioning ----------------------
+  web_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: {get_param: external_network_id}
+
+  web_server:
+    type: OS::Nova::Server
+    properties:
+      name: "t2-web"
+      image: {get_param: web_image}
+      flavor: {get_param: web_flavor}
+      key_name: key1
+      networks:
+        [{"network": {get_resource: internal_netA},
+          "port": {get_resource: internal_netA_port}}]
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash
+            echo -e "$web_ip\t\tt2-web\n$app_ip\t\tt2-app\n$db_ip\t\tt2-db" >> /etc/hosts
+          params:
+            $web_ip: {get_param: web_ip}
+            $app_ip: { get_param: app_ip}
+            $db_ip: { get_param: db_ip}
+      user_data_format: RAW
+
+  web_association:
+    type: OS::Nova::FloatingIPAssociation
+    properties:
+      floating_ip: { get_resource: web_floating_ip }
+      server_id: { get_resource: web_server }
+
+#------  APP Server Provisioning ----------------------
+  app_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: {get_param: external_network_id}
+
+  app_server:
+    type: OS::Nova::Server
+    properties:
+      name: "t2-app"
+      image: {get_param: app_image}
+      flavor: {get_param: app_flavor}
+      key_name: key1
+      networks:
+        [{"network": {get_resource: internal_netB},
+          "port": {get_resource: internal_netB_port}}]
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash
+            echo -e "$web_ip\t\tt2-web\n$app_ip\t\tt2-app\n$db_ip\t\tt2-db" >> /etc/hosts
+          params:
+            $web_ip: {get_param: web_ip}
+            $app_ip: { get_param: app_ip}
+            $db_ip: { get_param: db_ip}
+      user_data_format: RAW
+
+  app_association:
+    type: OS::Nova::FloatingIPAssociation
+    properties:
+      floating_ip: { get_resource: app_floating_ip }
+      server_id: { get_resource: app_server }
+  
+#------  DB Server Provisioning ----------------------
+  db_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: {get_param: external_network_id}
+
+  db_server:
+    type: OS::Nova::Server
+    properties:
+      name: "t2-db"
+      image: {get_param: db_image}
+      flavor: {get_param: db_flavor}
+      key_name: key1
+      networks:
+        [{"network": {get_resource: internal_netC},
+          "port": {get_resource: internal_netC_port}}]
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash
+            echo -e "$web_ip\t\tt2-web\n$app_ip\t\tt2-app\n$db_ip\t\tt2-db" >> /etc/hosts
+          params:
+            $web_ip: {get_param: web_ip}
+            $app_ip: { get_param: app_ip}
+            $db_ip: { get_param: db_ip}
+      user_data_format: RAW
+
+  db_association:
+    type: OS::Nova::FloatingIPAssociation
+    properties:
+      floating_ip: { get_resource: db_floating_ip }
+      server_id: { get_resource: db_server }
+
+#------  Firewall Rules Provisioning ----------------------
+  fw_tcp_allowall:
+    type: OS::Neutron::FirewallRule
+    properties:
+      action: allow
+      source_ip_address: {get_param: fw_source_cidrs}
+      source_port: {get_param: fw_source_port}
+      destination_ip_address: {get_param: fw_dest_cidrs}
+      destination_port: {get_param: fw_dest_port}
+      enabled: True
+      name: "TCP Allow All"
+      protocol: tcp
+
+  fw_udp_allowall:
+    type: OS::Neutron::FirewallRule
+    properties:
+      action: allow
+      source_ip_address: {get_param: fw_source_cidrs}
+      source_port: {get_param: fw_source_port}
+      destination_ip_address: {get_param: fw_dest_cidrs}
+      destination_port: {get_param: fw_dest_port}
+      enabled: True
+      name: "UDP Allow All"
+      protocol: udp
+
+  fw_icmp_allow:
+    type: OS::Neutron::FirewallRule
+    properties:
+      action: allow
+      source_ip_address: {get_param: fw_source_cidrs}
+      destination_ip_address: {get_param: fw_dest_cidrs}
+      enabled: True
+      name: "ICMP Allow"
+      protocol: icmp

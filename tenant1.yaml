@@ -1,54 +1,103 @@
 heat_template_version: 2015-04-30
 description: AutoScaling in LoadBalancer
 parameters:
-  image:
+  web_image:
     type: string
     description: Image used for servers
     #default: d36f2c18-1fcd-4a65-a973-b465897e6b57 # lamp5
-    default: LAMP5.4
+    default: t1-web-v2
+    label: "Web Server Image"
+
+  db_image:
+    type: string
+    description: Image used for servers
+    #default: d36f2c18-1fcd-4a65-a973-b465897e6b57 # lamp5
+    default: t1-db-v2
+    label: "DB Server Image"
+
+  web_flavor:
+    type: string
+    description: flavor used by the web servers
+    default: 2u4r5g
+    label: "Web Server Flavor"
+
+  db_flavor:
+    type: string
+    description: flavor used by the DB servers
+    default: 2u2r5g
+    label: "DB Server Flavor"
+
   key:
     type: string
     description: SSH key to connect to the servers
     default: key1
-  flavor:
-    type: string
-    description: flavor used by the web servers
-    default: af7c9a19-9636-44f9-af05-e0479d6a15b0
-  network:
-    type: string
-    description: Network used by the server
-    default: a81ed667-4078-4095-a34c-65777ecbc68e
-  subnet_id:
-    type: string
-    description: subnet on which the load balancer will be located
-    default: f0ba0e25-c482-4e15-98f2-dc181dee2d79
+
+#  network:
+#    type: string
+#    description: Network used by the server
+#    default: a81ed667-4078-4095-a34c-65777ecbc68e
+
+#  subnet_id:
+#    type: string
+#    description: subnet on which the load balancer will be located
+#    default: f0ba0e25-c482-4e15-98f2-dc181dee2d79
+
   internal_netA_subnet_cidr:
     type: string
     description: subnet IP/CIDR
     default: 10.0.0.0/24
+
   internal_netB_subnet_cidr:
     type: string
     description: subnet IP/CIDR
     default: 20.0.0.0/24
-  vm1_ip:
-    label: "Web Server IP"
-    type: string
-    description: Web Server IP
-    default: 10.0.0.101
-  vm2_ip:
+
+  db_ip:
     label: "DB Server IP"
     type: string
     description: DB Server IP
     default: 20.0.0.101
+
+  web_ip:
+    label: "Web Server IP"
+    type: string
+    description: Web Server IP
+    default: 20.0.0.102
+
   external_network_id:
     type: string
     description: UUID of a Neutron external network
     default: 73a32a5d-8a0b-4ffc-9c32-a288224917ac
+
   checkservice:
     type: string
     constraints:
       - allowed_values: [PING, TCP, HTTP, HTTPS]
     default: HTTP
+
+# fw_source_cidrs:
+#   label: Firewall Rule Source CIDR/IP
+#   type: string
+#   description: Firewall Rules Source CIDR/IP
+#   default: 0.0.0.0/0
+#
+# fw_dest_cidrs:
+#   label: Firewall Rule Destination CIDR/IP
+#   type: string
+#   description: Firewall Rules Destination CIDR/IP
+#   default: 0.0.0.0/0
+#
+# fw_source_port:
+#   label: Firewall Rule Source Port
+#   type: string
+#   description: Firewall Rules Source Port
+#   default: 1:65535
+#
+# fw_dest_port:
+#   label: Firewall Rule Destination Port
+#   type: string
+#   description: Firewall Rules Destination Port
+#   default: 1:65535
 
 resources:
   internal_netA:
@@ -69,9 +118,6 @@ resources:
     type: OS::Neutron::Port
     properties:
       name: "netA-fixed-port"
-      fixed_ips:
-      - ip_address: {get_param: vm1_ip}
-        subnet_id: {get_resource: internal_netA_subnet}
       network_id: {get_resource: internal_netA}
 
   internal_netB:
@@ -93,7 +139,7 @@ resources:
     properties:
       name: "netB-fixed-port"
       fixed_ips:
-      - ip_address: {get_param: vm2_ip}
+      - ip_address: {get_param: db_ip}
         subnet_id: {get_resource: internal_netB_subnet}
       network_id: {get_resource: internal_netB}  
 
@@ -115,6 +161,71 @@ resources:
       router_id: {get_resource: router1}
       subnet_id: {get_resource: internal_netB_subnet}
 
+  db_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: {get_param: external_network_id}
+
+  db_server:
+    type: OS::Nova::Server
+    properties:
+      name: "t1-db"
+      image: {get_param: db_image}
+      flavor: {get_param: db_flavor}
+      key_name: key1
+      networks:
+        [{"network": {get_resource: internal_netB},
+          "port": {get_resource: internal_netB_port}}]
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash
+            echo -e "$web_ip\t\tt1-web\n$db_ip\t\tt1-db" >> /etc/hosts
+          params:
+            $web_ip: {get_param: web_ip}
+            $db_ip: { get_param: db_ip}
+      user_data_format: RAW
+
+  db_association:
+    type: OS::Nova::FloatingIPAssociation
+    properties:
+      floating_ip: { get_resource: db_floating_ip }
+      server_id: { get_resource: db_server }
+
+# fw_tcp_allowall:
+#   type: OS::Neutron::FirewallRule
+#   properties:
+#     action: allow
+#     source_ip_address: {get_param: fw_source_cidrs}
+#     source_port: {get_param: fw_source_port}
+#     destination_ip_address: {get_param: fw_dest_cidrs}
+#     destination_port: {get_param: fw_dest_port}
+#     enabled: True
+#     name: "TCP Allow All"
+#     protocol: tcp
+#
+# fw_udp_allowall:
+#   type: OS::Neutron::FirewallRule
+#   properties:
+#     action: allow
+#     source_ip_address: {get_param: fw_source_cidrs}
+#     source_port: {get_param: fw_source_port}
+#     destination_ip_address: {get_param: fw_dest_cidrs}
+#     destination_port: {get_param: fw_dest_port}
+#     enabled: True
+#     name: "UDP Allow All"
+#     protocol: udp
+#
+# fw_icmp_allow:
+#   type: OS::Neutron::FirewallRule
+#   properties:
+#     action: allow
+#     source_ip_address: {get_param: fw_source_cidrs}
+#     destination_ip_address: {get_param: fw_dest_cidrs}
+#     enabled: True
+#     name: "ICMP Allow"
+#     protocol: icmp
+#
   asg:
     type: OS::Heat::AutoScalingGroup
     properties:
@@ -124,8 +235,8 @@ resources:
       resource:
         type: "http://192.168.121.102/as_server54.yaml"
         properties:
-          flavor: {get_param: flavor}
-          image: {get_param: image}
+          flavor: {get_param: web_flavor}
+          image: {get_param: web_image}
           key_name: {get_param: key}
           network: {get_resource: internal_netA}
           pool_id: {get_resource: pool}
@@ -150,10 +261,10 @@ resources:
   cpu_alarm_high:
     type: OS::Ceilometer::Alarm
     properties:
-      description: Scale-up if the average CPU > 80% for 30 second
+      description: Scale-up if the average CPU > 50% for 30 second
       meter_name: cpu_util
       statistic: avg
-      period: 30
+      period: 120
       evaluation_periods: 1
       threshold: 50
       alarm_actions:
@@ -167,7 +278,7 @@ resources:
       description: Scale-down if the average CPU < 15% for 30 second
       meter_name: cpu_util
       statistic: avg
-      period: 30
+      period: 120
       evaluation_periods: 1
       threshold: 15
       alarm_actions:
@@ -235,7 +346,7 @@ outputs:
       str_replace:
         template: >
           ceilometer statistics -m cpu_util
-          -q metadata.user_metadata.stack=stackval -p 600 -a avg
+          -q metadata.user_metadata.stack=stackval -p 60 -a avg
         params:
           stackval: { get_param: "OS::stack_id" }
     description: >
@@ -250,4 +361,4 @@ outputs:
       their VMs metadata that is passed as a nested stack parameter,
       and this stack passes a metadata of the form metering.stack=Y,
       where Y is this stack's ID.
-  
+ 
