@@ -1,18 +1,15 @@
 heat_template_version: 2015-04-30
-description: LAMP server
+description: Web server
 parameters:
   image:
     type: string
     description: Image used for servers
-    default: LAMP5.4
   key_name:
     type: string
     description: SSH key to connect to the servers
-    default: key1
   flavor:
     type: string
     description: flavor used by the servers
-    default: af7c9a19-9636-44f9-af05-e0479d6a15b0
   pool_id:
     type: string
     description: Pool to contact
@@ -21,18 +18,41 @@ parameters:
   network:
     type: string
     description: Network used by the server
-    default: a81ed667-4078-4095-a34c-65777ecbc68e
+  external_network_id:
+    type: string
+    description: External Network
+    default: 73a32a5d-8a0b-4ffc-9c32-a288224917ac
+  user_data:
+    type: string
+    description: Server user_data
+#  db_ip:
+#    type: string
+#    description: DB Server IP
+
 
 resources:
+  lamp_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: {get_param: external_network_id}
+
   lamp:
     type: OS::Nova::Server
     properties:
-      name: LAMP Server
+      name: t1-web
       flavor: {get_param: flavor}
-      image: {get_param: image}
+      image: t1-web-v3
       key_name: {get_param: key_name}
       metadata: {get_param: metadata}
       networks: [{network: {get_param: network} }]
+      user_data: {get_param: user_data}
+      user_data_format: RAW
+
+  lamp_association:
+    type: OS::Nova::FloatingIPAssociation
+    properties:
+      floating_ip: { get_resource: lamp_floating_ip }
+      server_id: { get_resource: lamp }
 
   member:
     type: OS::Neutron::PoolMember

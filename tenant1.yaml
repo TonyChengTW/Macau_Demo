@@ -6,7 +6,7 @@ parameters:
     type: string
     description: Image used for servers
     #default: d36f2c18-1fcd-4a65-a973-b465897e6b57 # lamp5
-    default: t1-web-v2
+    default: t1-web-v3
     label: "Web Server Image"
 
   db_image:
@@ -32,16 +32,6 @@ parameters:
     type: string
     description: SSH key to connect to the servers
     default: key1
-
-#  network:
-#    type: string
-#    description: Network used by the server
-#    default: a81ed667-4078-4095-a34c-65777ecbc68e
-
-#  subnet_id:
-#    type: string
-#    description: subnet on which the load balancer will be located
-#    default: f0ba0e25-c482-4e15-98f2-dc181dee2d79
 
   internal_netA_subnet_cidr:
     type: string
@@ -237,9 +227,8 @@ resources:
             str_replace:
               template: |
                 #!/bin/bash
-                echo -e "$web_ip\t\tt1-web\n$db_ip\t\tt1-db" >> /etc/hosts
+                echo -e "$db_ip\t\tt1-db" >> /etc/hosts
               params:
-                $web_ip: {get_param: web_ip}
                 $db_ip: {get_param: db_ip}
 
   web_server_scaleup_policy:
@@ -290,9 +279,10 @@ resources:
     type: OS::Neutron::HealthMonitor
     properties:
       type: {get_param: checkservice}
-      delay: 5
-      max_retries: 5
-      timeout: 5
+      delay: 3
+      max_retries: 3
+      timeout: 3
+      url_path: /login/?next=/
 
   pool:
     type: OS::Neutron::Pool
