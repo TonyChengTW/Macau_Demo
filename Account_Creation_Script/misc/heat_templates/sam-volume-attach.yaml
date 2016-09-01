@@ -1,0 +1,38 @@
+heat_template_version: 2014-10-16
+description: Auto Scaling with desired servers  - Tony Cheng 2015/8/14 v1
+resources:
+  my_instance:
+    type: OS::Nova::Server
+    properties:
+      name: sam-custom-name3
+      image: cirros
+      flavor: m1.tiny
+      networks:
+        - network: demo-net1
+
+  volume1:
+    type: OS::Cinder::Volume
+    properties:
+      volume_type: sas
+      size: 1
+  volume2:
+    type: OS::Cinder::Volume
+    properties:
+      volume_type: sas
+      size: 1
+
+  vol_att1:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      instance_uuid: { get_resource: my_instance }
+      volume_id: { get_resource: volume1 }
+      mountpoint: /dev/vdb
+
+  vol_att2:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      instance_uuid: { get_resource: my_instance }
+      volume_id: { get_resource: volume2 }
+      mountpoint: /dev/vdc
+
+

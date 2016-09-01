@@ -1,0 +1,37 @@
+{
+  "project_a": [
+    "user_a_0", 
+    "user_a_1", 
+    "user_a_2", 
+    "user_a_3", 
+    "user_a_4"
+  ], 
+  "project_b": [
+    "user_b_0", 
+    "user_b_1", 
+    "user_b_2", 
+    "user_b_3", 
+    "user_b_4"
+  ], 
+  "project_c": [
+    "user_c_0", 
+    "user_c_1", 
+    "user_c_2", 
+    "user_c_3", 
+    "user_c_4"
+  ], 
+  "project_d": [
+    "user_d_0", 
+    "user_d_1", 
+    "user_d_2", 
+    "user_d_3", 
+    "user_d_4"
+  ], 
+  "project_e": [
+    "user_e_0", 
+    "user_e_1", 
+    "user_e_2", 
+    "user_e_3", 
+    "user_e_4"
+  ]
+}
