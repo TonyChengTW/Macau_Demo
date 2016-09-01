@@ -1,4 +1,5 @@
 heat_template_version: 2015-04-30
+#heat_template_version: 2013-05-23
 description: AutoScaling in LoadBalancer
 parameters:
   web_image:
@@ -52,17 +53,17 @@ parameters:
     description: subnet IP/CIDR
     default: 20.0.0.0/24
 
+  web_ip:
+    label: "Web Server IP"
+    type: string
+    description: Web Server IP
+    default: 10.0.0.101
+
   db_ip:
     label: "DB Server IP"
     type: string
     description: DB Server IP
     default: 20.0.0.101
-
-  web_ip:
-    label: "Web Server IP"
-    type: string
-    description: Web Server IP
-    default: 20.0.0.102
 
   external_network_id:
     type: string
@@ -75,29 +76,29 @@ parameters:
       - allowed_values: [PING, TCP, HTTP, HTTPS]
     default: HTTP
 
-# fw_source_cidrs:
-#   label: Firewall Rule Source CIDR/IP
-#   type: string
-#   description: Firewall Rules Source CIDR/IP
-#   default: 0.0.0.0/0
-#
-# fw_dest_cidrs:
-#   label: Firewall Rule Destination CIDR/IP
-#   type: string
-#   description: Firewall Rules Destination CIDR/IP
-#   default: 0.0.0.0/0
-#
-# fw_source_port:
-#   label: Firewall Rule Source Port
-#   type: string
-#   description: Firewall Rules Source Port
-#   default: 1:65535
-#
-# fw_dest_port:
-#   label: Firewall Rule Destination Port
-#   type: string
-#   description: Firewall Rules Destination Port
-#   default: 1:65535
+  fw_source_cidrs:
+    label: Firewall Rule Source CIDR/IP
+    type: string
+    description: Firewall Rules Source CIDR/IP
+    default: 0.0.0.0/0
+ 
+  fw_dest_cidrs:
+    label: Firewall Rule Destination CIDR/IP
+    type: string
+    description: Firewall Rules Destination CIDR/IP
+    default: 0.0.0.0/0
+ 
+  fw_source_port:
+    label: Firewall Rule Source Port
+    type: string
+    description: Firewall Rules Source Port
+    default: 1:65535
+ 
+  fw_dest_port:
+    label: Firewall Rule Destination Port
+    type: string
+    description: Firewall Rules Destination Port
+    default: 1:65535
 
 resources:
   internal_netA:
@@ -176,15 +177,6 @@ resources:
       networks:
         [{"network": {get_resource: internal_netB},
           "port": {get_resource: internal_netB_port}}]
-      user_data:
-        str_replace:
-          template: |
-            #!/bin/bash
-            echo -e "$web_ip\t\tt1-web\n$db_ip\t\tt1-db" >> /etc/hosts
-          params:
-            $web_ip: {get_param: web_ip}
-            $db_ip: { get_param: db_ip}
-      user_data_format: RAW
 
   db_association:
     type: OS::Nova::FloatingIPAssociation
@@ -192,40 +184,40 @@ resources:
       floating_ip: { get_resource: db_floating_ip }
       server_id: { get_resource: db_server }
 
-# fw_tcp_allowall:
-#   type: OS::Neutron::FirewallRule
-#   properties:
-#     action: allow
-#     source_ip_address: {get_param: fw_source_cidrs}
-#     source_port: {get_param: fw_source_port}
-#     destination_ip_address: {get_param: fw_dest_cidrs}
-#     destination_port: {get_param: fw_dest_port}
-#     enabled: True
-#     name: "TCP Allow All"
-#     protocol: tcp
-#
-# fw_udp_allowall:
-#   type: OS::Neutron::FirewallRule
-#   properties:
-#     action: allow
-#     source_ip_address: {get_param: fw_source_cidrs}
-#     source_port: {get_param: fw_source_port}
-#     destination_ip_address: {get_param: fw_dest_cidrs}
-#     destination_port: {get_param: fw_dest_port}
-#     enabled: True
-#     name: "UDP Allow All"
-#     protocol: udp
-#
-# fw_icmp_allow:
-#   type: OS::Neutron::FirewallRule
-#   properties:
-#     action: allow
-#     source_ip_address: {get_param: fw_source_cidrs}
-#     destination_ip_address: {get_param: fw_dest_cidrs}
-#     enabled: True
-#     name: "ICMP Allow"
-#     protocol: icmp
-#
+  fw_tcp_allowall:
+    type: OS::Neutron::FirewallRule
+    properties:
+      action: allow
+      source_ip_address: {get_param: fw_source_cidrs}
+      source_port: {get_param: fw_source_port}
+      destination_ip_address: {get_param: fw_dest_cidrs}
+      destination_port: {get_param: fw_dest_port}
+      enabled: True
+      name: "TCP Allow All"
+      protocol: tcp
+ 
+  fw_udp_allowall:
+    type: OS::Neutron::FirewallRule
+    properties:
+      action: allow
+      source_ip_address: {get_param: fw_source_cidrs}
+      source_port: {get_param: fw_source_port}
+      destination_ip_address: {get_param: fw_dest_cidrs}
+      destination_port: {get_param: fw_dest_port}
+      enabled: True
+      name: "UDP Allow All"
+      protocol: udp
+ 
+  fw_icmp_allow:
+    type: OS::Neutron::FirewallRule
+    properties:
+      action: allow
+      source_ip_address: {get_param: fw_source_cidrs}
+      destination_ip_address: {get_param: fw_dest_cidrs}
+      enabled: True
+      name: "ICMP Allow"
+      protocol: icmp
+ 
   asg:
     type: OS::Heat::AutoScalingGroup
     properties:
@@ -241,6 +233,14 @@ resources:
           network: {get_resource: internal_netA}
           pool_id: {get_resource: pool}
           metadata: {"metering.stack": {get_param: "OS::stack_id"}}
+          user_data:
+            str_replace:
+              template: |
+                #!/bin/bash
+                echo -e "$web_ip\t\tt1-web\n$db_ip\t\tt1-db" >> /etc/hosts
+              params:
+                $web_ip: {get_param: web_ip}
+                $db_ip: {get_param: db_ip}
 
   web_server_scaleup_policy:
     type: OS::Heat::ScalingPolicy
