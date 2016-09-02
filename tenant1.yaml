@@ -28,10 +28,10 @@ parameters:
     default: 2u2r5g
     label: "DB Server Flavor"
 
-  key:
-    type: string
-    description: SSH key to connect to the servers
-    default: key1
+#  key:
+#    type: string
+#    description: SSH key to connect to the servers
+#    default: key1
 
   internal_netA_subnet_cidr:
     type: string
@@ -163,7 +163,7 @@ resources:
       name: "t1-db"
       image: {get_param: db_image}
       flavor: {get_param: db_flavor}
-      key_name: key1
+#      key_name: key1
       networks:
         [{"network": {get_resource: internal_netB},
           "port": {get_resource: internal_netB_port}}]
@@ -219,7 +219,7 @@ resources:
         properties:
           flavor: {get_param: web_flavor}
           image: {get_param: web_image}
-          key_name: {get_param: key}
+ #         key_name: {get_param: key}
           network: {get_resource: internal_netA}
           pool_id: {get_resource: pool}
           metadata: {"metering.stack": {get_param: "OS::stack_id"}}

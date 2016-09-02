@@ -40,10 +40,10 @@ parameters:
     default: 2u2r5g
     label: "APP Server Flavor"
 
-  key:
-    type: string
-    description: SSH key to connect to the servers
-    default: key1
+#  key:
+#    type: string
+#    description: SSH key to connect to the servers
+#    default: key1
 
 #  network:
 #    type: string
@@ -221,7 +221,7 @@ resources:
       name: "t2-web"
       image: {get_param: web_image}
       flavor: {get_param: web_flavor}
-      key_name: key1
+#      key_name: key1
       networks:
         [{"network": {get_resource: internal_netA},
           "port": {get_resource: internal_netA_port}}]
@@ -254,7 +254,7 @@ resources:
       name: "t2-app"
       image: {get_param: app_image}
       flavor: {get_param: app_flavor}
-      key_name: key1
+#      key_name: key1
       networks:
         [{"network": {get_resource: internal_netB},
           "port": {get_resource: internal_netB_port}}]
@@ -287,7 +287,7 @@ resources:
       name: "t2-db"
       image: {get_param: db_image}
       flavor: {get_param: db_flavor}
-      key_name: key1
+#      key_name: key1
       networks:
         [{"network": {get_resource: internal_netC},
           "port": {get_resource: internal_netC_port}}]

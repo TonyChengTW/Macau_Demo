@@ -4,9 +4,9 @@ parameters:
   image:
     type: string
     description: Image used for servers
-  key_name:
-    type: string
-    description: SSH key to connect to the servers
+#  key_name:
+#    type: string
+#    description: SSH key to connect to the servers
   flavor:
     type: string
     description: flavor used by the servers
@@ -42,7 +42,7 @@ resources:
       name: t1-web
       flavor: {get_param: flavor}
       image: t1-web-v3
-      key_name: {get_param: key_name}
+#      key_name: {get_param: key_name}
       metadata: {get_param: metadata}
       networks: [{network: {get_param: network} }]
       user_data: {get_param: user_data}
