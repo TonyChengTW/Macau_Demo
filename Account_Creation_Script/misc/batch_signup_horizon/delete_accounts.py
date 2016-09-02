@@ -3,8 +3,14 @@ from keystoneclient.v3 import client
 from config import auth as config_auth
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
+import sys
 
-with open('list.json') as data_file:
+try:
+    file_name = sys.argv[1] or 'list.json'
+except Exception:
+    file_name = 'list.json'
+
+with open(file_name) as data_file:
     data = json.load(data_file)
 
 auth = v3.Password(**config_auth)
